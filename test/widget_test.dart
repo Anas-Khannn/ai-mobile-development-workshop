@@ -1,27 +1,43 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:activity_gsp/data/models.dart';
 import 'package:activity_gsp/main.dart';
+import 'package:activity_gsp/screens/student/student_home_screen.dart';
+
+import 'test_utils.dart';
+
+Future<StudyyBuddyApp> studentHomeApp() async {
+  final TestHarness harness = await createHarness();
+  await harness.signedIn(UserRole.student);
+  return harness.app(home: const StudentHomeScreen());
+}
+
+Future<void> pumpStudentHome(WidgetTester tester) async {
+  await tester.pumpWidget(await studentHomeApp());
+  await tester.pumpAndSettle();
+}
 
 void main() {
   testWidgets('home screen lists every topic card', (
     WidgetTester tester,
   ) async {
-    await tester.pumpWidget(const StudyyBuddyApp());
+    await pumpStudentHome(tester);
 
     expect(find.text('Studyy Buddy'), findsOneWidget);
-    expect(find.byKey(const ValueKey<String>('topic_0')), findsOneWidget);
-    expect(find.byKey(const ValueKey<String>('topic_1')), findsOneWidget);
-    expect(find.byKey(const ValueKey<String>('topic_2')), findsOneWidget);
+    for (int i = 0; i < 3; i++) {
+      final Finder topic = find.byKey(ValueKey<String>('topic_$i'));
+      await revealFinder(tester, topic);
+      expect(topic, findsOneWidget);
+    }
   });
 
   testWidgets('quiz shows a progress bar and one question at a time', (
     WidgetTester tester,
   ) async {
-    await tester.pumpWidget(const StudyyBuddyApp());
+    await pumpStudentHome(tester);
 
-    await tester.tap(find.byKey(const ValueKey<String>('topic_2')));
-    await tester.pumpAndSettle();
+    await tapKey(tester, 'topic_2');
 
     expect(find.byType(LinearProgressIndicator), findsOneWidget);
     expect(find.text('Question 1 of 3'), findsOneWidget);
@@ -32,10 +48,9 @@ void main() {
   testWidgets('answering reveals feedback and advances to the score screen', (
     WidgetTester tester,
   ) async {
-    await tester.pumpWidget(const StudyyBuddyApp());
+    await pumpStudentHome(tester);
 
-    await tester.tap(find.byKey(const ValueKey<String>('topic_0')));
-    await tester.pumpAndSettle();
+    await tapKey(tester, 'topic_0');
 
     for (int question = 0; question < 3; question++) {
       final Finder option = find.byKey(const ValueKey<String>('option_0'));
@@ -65,10 +80,9 @@ void main() {
   testWidgets('restart replays the quiz from the first question', (
     WidgetTester tester,
   ) async {
-    await tester.pumpWidget(const StudyyBuddyApp());
+    await pumpStudentHome(tester);
 
-    await tester.tap(find.byKey(const ValueKey<String>('topic_0')));
-    await tester.pumpAndSettle();
+    await tapKey(tester, 'topic_0');
 
     for (int question = 0; question < 3; question++) {
       await tester.ensureVisible(
@@ -97,10 +111,9 @@ void main() {
   testWidgets('option tiles stop accepting taps after an answer', (
     WidgetTester tester,
   ) async {
-    await tester.pumpWidget(const StudyyBuddyApp());
+    await pumpStudentHome(tester);
 
-    await tester.tap(find.byKey(const ValueKey<String>('topic_1')));
-    await tester.pumpAndSettle();
+    await tapKey(tester, 'topic_1');
 
     await tester.ensureVisible(find.byKey(const ValueKey<String>('option_0')));
     await tester.tap(find.byKey(const ValueKey<String>('option_0')));
@@ -125,7 +138,7 @@ void main() {
     await tester.pumpWidget(
       MediaQuery(
         data: const MediaQueryData(textScaler: TextScaler.linear(2)),
-        child: const StudyyBuddyApp(),
+        child: await studentHomeApp(),
       ),
     );
     expect(tester.takeException(), isNull);
